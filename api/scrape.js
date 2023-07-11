@@ -48,6 +48,8 @@ async function scrapeWebsite() {
   await page.type("#Password", process.env.MQL5_PASSWORD);
   await page.click("#loginSubmit");
 
+  console.log("Logged in successfully !");
+
   // wait for navigation to complete
   await page.waitForNavigation();
 
