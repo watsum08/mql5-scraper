@@ -10,11 +10,15 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@netlify/functions": "^1.6.0",
     "dotenv": "^16.3.1",
     "mongodb": "^5.7.0",
     "puppeteer": "^20.8.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "vercel": "^31.0.2"
+  },
+  "devDependencies": {
+    "netlify-cli": "^15.8.1"
   }
 }
