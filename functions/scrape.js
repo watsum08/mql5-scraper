@@ -26,10 +26,12 @@ async function addToDb(data) {
 async function scrapeWebsite() {
   console.log('Launching browser...');
 
-  const browser = await playwright.chromium.launch({
-    executablePath: require('playwright-chromium').executablePath(),
-    headless: chromium.headless,
-  });
+  const playwrightChromium = require('playwright-chromium');
+
+const browser = await playwrightChromium.chromium.launch({
+  executablePath: playwrightChromium.chromium.executablePath(),
+  headless: true,
+});
   
 
   console.log('Browser launched!');
