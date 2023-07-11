@@ -27,9 +27,10 @@ async function scrapeWebsite() {
   console.log('Launching browser...');
 
   const browser = await playwright.chromium.launch({
-    executablePath: process.env.CHROME_EXECUTABLE_PATH || await chromium.executablePath,
+    executablePath: require('playwright-chromium').executablePath(),
     headless: chromium.headless,
   });
+  
 
   console.log('Browser launched!');
 
