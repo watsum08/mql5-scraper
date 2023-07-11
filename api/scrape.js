@@ -12,7 +12,9 @@ async function addToDb(data) {
   try {
     await client.connect();
 
-    const collection = client.db(process.env.MONGODB_DBNAME).collection(process.env.MONGODB_COLLECTIONNAME);
+    const collection = client
+      .db(process.env.MONGODB_DBNAME)
+      .collection(process.env.MONGODB_COLLECTIONNAME);
     const result = await collection.insertMany(data);
 
     console.log(`Inserted ${result.insertedCount} documents into MongoDB`);
@@ -98,6 +100,21 @@ async function scrapeWebsite() {
   return data;
 }
 
+// This is your serverless function for Vercel
+module.exports = async (req, res) => {
+  try {
+    const data = await scrapeWebsite();
+    console.log(data);
+    await addToDb(data);
+    res.status(200).send("Scrape and data insert successful");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("An error occurred");
+  }
+};
+
+{
+  /*
 scrapeWebsite()
   .then((data) => {
     console.log(data);
@@ -105,3 +122,5 @@ scrapeWebsite()
     addToDb(data).catch(console.error);
   })
   .catch((err) => console.error(err));
+*/
+}
