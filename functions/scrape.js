@@ -1,10 +1,7 @@
 require('dotenv').config();
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const chromium = require('chrome-aws-lambda');
+const playwright = require('playwright-core');
 const { MongoClient } = require('mongodb');
-
-puppeteer.use(StealthPlugin());
+const chromium = require('chrome-aws-lambda');
 
 async function addToDb(data) {
   const uri = process.env.MONGODB_URI;
@@ -29,24 +26,31 @@ async function addToDb(data) {
 async function scrapeWebsite() {
   console.log('Launching browser...');
 
-  const browser = await puppeteer.launch({
-    args: chromium.args,
+  const browser = await playwright.chromium.launch({
     executablePath: process.env.CHROME_EXECUTABLE_PATH || await chromium.executablePath,
-    headless: true,
+    headless: chromium.headless,
   });
 
   console.log('Browser launched!');
 
+  const context = await browser.newContext({
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    locale: 'en-US',
+    timezoneId: 'America/New_York',
+    permissions: ['geolocation'],
+    geolocation: { latitude: 51.5074, longitude: -0.1278 }, // Set a default geolocation if needed
+  });
+
   console.log('Opening new page...');
-  const page = await browser.newPage();
+  const page = await context.newPage();
   console.log('New page opened.');
 
   console.log('Going to base page...');
-  await page.goto('https://www.mql5.com/');
+  await page.goto('https://www.mql5.com/', { waitUntil: 'domcontentloaded' });
   console.log('On base page');
 
   console.log('Navigating to login page...');
-  await page.goto('https://www.mql5.com/en/auth_login');
+  await page.goto('https://www.mql5.com/en/auth_login', { waitUntil: 'domcontentloaded' });
   console.log('On login page');
 
   // login
@@ -58,10 +62,10 @@ async function scrapeWebsite() {
   console.log('Logged in successfully!');
 
   // wait for navigation to complete
-  await page.waitForNavigation();
+  await page.waitForNavigation({ waitUntil: 'domcontentloaded' });
 
   // go to the page to scrape
-  await page.goto('https://www.mql5.com/en/users/taherhalimi/feedbacks');
+  await page.goto('https://www.mql5.com/en/users/taherhalimi/feedbacks', { waitUntil: 'domcontentloaded' });
 
   // perform your scraping here...
   // after navigating to the page with the reviews...
