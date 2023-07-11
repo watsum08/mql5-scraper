@@ -3,11 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "start": "npm install && npm run install-chromium && micro api/scrape.js",
-    "dev": "npm install && npm run install-chromium && micro api/scrape.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npm install && npm run install-chromium",
-    "install-chromium": "npm install puppeteer puppeteer-extra chromium"
+    "start": "micro api/scrape.js",
+    "dev": "micro api/scrape.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
