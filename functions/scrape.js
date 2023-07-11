@@ -1,7 +1,8 @@
-require("dotenv").config();
-const puppeteer = require("puppeteer-extra");
-const StealthPlugin = require("puppeteer-extra-plugin-stealth");
-const { MongoClient } = require("mongodb");
+require('dotenv').config();
+const puppeteer = require('puppeteer-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const chromium = require('chrome-aws-lambda');
+const { MongoClient } = require('mongodb');
 
 puppeteer.use(StealthPlugin());
 
@@ -26,67 +27,69 @@ async function addToDb(data) {
 }
 
 async function scrapeWebsite() {
-  console.log("Launching browser...");
-  const browser = await puppeteer.launch({ headless: true }); // headless: false for debugging
-  console.log("Browser launched!");
+  console.log('Launching browser...');
 
-  console.log("Opening new page...");
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    executablePath: process.env.CHROME_EXECUTABLE_PATH || await chromium.executablePath,
+    headless: true,
+  });
+
+  console.log('Browser launched!');
+
+  console.log('Opening new page...');
   const page = await browser.newPage();
-  console.log("New page opened.");
+  console.log('New page opened.');
 
-  console.log("Going to base page...");
-  await page.goto("https://www.mql5.com/");
-  console.log("On base page");
+  console.log('Going to base page...');
+  await page.goto('https://www.mql5.com/');
+  console.log('On base page');
 
-  console.log("Navigating to login page...");
-  await page.goto("https://www.mql5.com/en/auth_login");
-  console.log("On login page");
+  console.log('Navigating to login page...');
+  await page.goto('https://www.mql5.com/en/auth_login');
+  console.log('On login page');
 
   // login
-  await page.waitForSelector("#Login");
-  await page.type("#Login", process.env.MQL5_USERNAME);
-  await page.type("#Password", process.env.MQL5_PASSWORD);
-  await page.click("#loginSubmit");
+  await page.waitForSelector('#Login');
+  await page.type('#Login', process.env.MQL5_USERNAME);
+  await page.type('#Password', process.env.MQL5_PASSWORD);
+  await page.click('#loginSubmit');
 
-  console.log("Logged in successfully !");
+  console.log('Logged in successfully!');
 
   // wait for navigation to complete
   await page.waitForNavigation();
 
   // go to the page to scrape
-  await page.goto("https://www.mql5.com/en/users/taherhalimi/feedbacks");
+  await page.goto('https://www.mql5.com/en/users/taherhalimi/feedbacks');
 
   // perform your scraping here...
   // after navigating to the page with the reviews...
 
-  console.log("Extracting reviews...");
+  console.log('Extracting reviews...');
   const data = await page.evaluate(() => {
-    const reviewElements = document.querySelectorAll(".rowLine"); // select each review element
+    const reviewElements = document.querySelectorAll('.rowLine'); // select each review element
     let reviews = []; // this array will hold each review
 
     reviewElements.forEach((reviewElement) => {
       let review = {};
 
       // Extract the rating
-      const ratingElement = reviewElement.querySelector(
-        ".rating-block-small__value"
-      );
+      const ratingElement = reviewElement.querySelector('.rating-block-small__value');
       if (ratingElement) {
         // count the number of <i> tags within the rating element
-        let rating = ratingElement.getElementsByTagName("i").length;
+        let rating = ratingElement.getElementsByTagName('i').length;
         review.rating = rating;
       }
 
       // Extract the customer's name
-      const nameElement = reviewElement.querySelector(".author");
+      const nameElement = reviewElement.querySelector('.author');
       if (nameElement) {
         review.name = nameElement.innerText;
       }
 
       // Extract the review message
-      const messageElements = reviewElement.querySelectorAll(
-        ".mainContainer > span"
-      );
+      const messageElements = reviewElement.querySelectorAll('.mainContainer > span');
       if (messageElements.length > 2) {
         review.message = messageElements[2].innerText;
       }
@@ -102,19 +105,8 @@ async function scrapeWebsite() {
   return data;
 }
 
-{
-  /*
-scrapeWebsite()
-  .then((data) => {
-    console.log(data);
-
-    addToDb(data).catch(console.error);
-  })
-  .catch((err) => console.error(err));
-*/
-}
 exports.handler = async function (event) {
-  console.log("Received event: " + event);
+  console.log('Received event: ' + event);
 
   try {
     const data = await scrapeWebsite();
@@ -122,13 +114,13 @@ exports.handler = async function (event) {
     await addToDb(data);
     return {
       statusCode: 200,
-      body: "Scrape and data insert successful !",
+      body: 'Scrape and data insert successful!',
     };
   } catch (err) {
     console.error(err);
     return {
       statusCode: 500,
-      body: "An error occurred",
+      body: 'An error occurred',
     };
   }
 };
