@@ -2,9 +2,6 @@ require("dotenv").config();
 const { MongoClient } = require("mongodb");
 const chromium = require("chrome-aws-lambda");
 const puppeteer = require("puppeteer-core");
-const stealth = require('puppeteer-extra-plugin-stealth');
-
-puppeteer.use(stealth());
 
 async function addToDb(data) {
   const uri = process.env.MONGODB_URI;
@@ -26,30 +23,66 @@ async function addToDb(data) {
   }
 }
 
+async function emulateStealth(page) {
+  await page.evaluateOnNewDocument(() => {
+    // Pass the Webdriver test
+    Object.defineProperty(navigator, "webdriver", {
+      get: () => false,
+    });
+
+    // Pass the Chrome Test.
+    // We can mock this in as much depth as we need for the test.
+    window.navigator.chrome = {
+      runtime: {},
+      // etc.
+    };
+
+    // Pass the Permissions Test.
+    const originalQuery = window.navigator.permissions.query;
+    return (window.navigator.permissions.query = (parameters) =>
+      parameters.name === "notifications"
+        ? Promise.resolve({ state: Notification.permission })
+        : originalQuery(parameters));
+
+    // Pass the Plugins Length Test.
+    Object.defineProperty(navigator, "plugins", {
+      get: () => [1, 2, 3, 4, 5],
+    });
+
+    // Pass the Languages Test.
+    Object.defineProperty(navigator, "languages", {
+      get: () => ["en-US", "en"],
+    });
+  });
+}
+
 async function scrapeWebsite() {
   console.log("Launching browser...");
 
   const browser = await puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: process.env.CHROME_EXECUTABLE_PATH || await chromium.executablePath,
+    executablePath:
+      process.env.CHROME_EXECUTABLE_PATH || (await chromium.executablePath),
     headless: chromium.headless,
   });
 
   console.log("Browser launched!");
 
-  const context = await browser.newContext({
-    userAgent:
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    locale: "en-US",
-    timezoneId: "America/New_York",
-    permissions: ["geolocation"],
-    geolocation: { latitude: 51.5074, longitude: -0.1278 }, // Set a default geolocation if needed
-  });
-
   console.log("Opening new page...");
-  const page = await context.newPage();
-  console.log("New page opened.");
+  const page = await browser.newPage();
+
+  console.log("Applying stealth mode...");
+  await emulateStealth(page);
+  console.log("Stealth mode applied.");
+
+  // Set your context (userAgent, geolocation, etc.)
+  const userAgent =
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
+  const geolocation = { latitude: 51.5074, longitude: -0.1278 }; // Set a default geolocation if needed
+
+  await page.setUserAgent(userAgent);
+  await page.setGeolocation(geolocation);
 
   console.log("Going to base page...");
   await page.goto("https://www.mql5.com/", { waitUntil: "domcontentloaded" });
