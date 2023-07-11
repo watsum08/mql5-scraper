@@ -42,8 +42,8 @@ async function scrapeWebsite() {
 
   // login
   await page.waitForSelector("#Login");
-  await page.type("#Login", process.env.MQL_USERNAME);
-  await page.type("#Password", process.env.MQL_PASSWORD);
+  await page.type("#Login", process.env.MQL5_USERNAME);
+  await page.type("#Password", process.env.MQL5_PASSWORD);
   await page.click("#loginSubmit");
 
   // wait for navigation to complete
