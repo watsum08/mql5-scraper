@@ -106,7 +106,7 @@ module.exports = async (req, res) => {
     const data = await scrapeWebsite();
     console.log(data);
     await addToDb(data);
-    res.status(200).send("Scrape and data insert successful");
+    res.status(200).send("Scrape and data insert successful !");
   } catch (err) {
     console.error(err);
     res.status(500).send("An error occurred");
