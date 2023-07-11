@@ -28,7 +28,7 @@ async function addToDb(data) {
 async function scrapeWebsite() {
   console.log("Launching browser...");
   const browser = await puppeteer.launch({ headless: true }); // headless: false for debugging
-  console.log("Browser launched");
+  console.log("Browser launched!");
 
   console.log("Opening new page...");
   const page = await browser.newPage();
