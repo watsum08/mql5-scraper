@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "start": "micro api/scrape.js",
-    "dev": "vercel dev",
+    "dev": "micro api/scrape.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
