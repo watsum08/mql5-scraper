@@ -32,7 +32,7 @@ async function scrapeWebsite() {
 
   console.log("Opening new page...");
   const page = await browser.newPage();
-  console.log("New page opened");
+  console.log("New page opened.");
 
   console.log("Going to base page...");
   await page.goto("https://www.mql5.com/");
