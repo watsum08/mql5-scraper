@@ -102,19 +102,6 @@ async function scrapeWebsite() {
   return data;
 }
 
-// This is your serverless function for Vercel
-module.exports = async (req, res) => {
-  try {
-    const data = await scrapeWebsite();
-    console.log(data);
-    await addToDb(data);
-    res.status(200).send("Scrape and data insert successful !");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("An error occurred");
-  }
-};
-
 {
   /*
 scrapeWebsite()
@@ -126,3 +113,22 @@ scrapeWebsite()
   .catch((err) => console.error(err));
 */
 }
+exports.handler = async function (event) {
+  console.log("Received event: " + event);
+
+  try {
+    const data = await scrapeWebsite();
+    console.log(data);
+    await addToDb(data);
+    return {
+      statusCode: 200,
+      body: "Scrape and data insert successful !",
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      statusCode: 500,
+      body: "An error occurred",
+    };
+  }
+};
