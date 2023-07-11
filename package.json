@@ -5,7 +5,9 @@
   "scripts": {
     "start": "micro api/scrape.js",
     "dev": "micro api/scrape.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm install && npm run install-chromium",
+    "install-chromium": "npm install puppeteer puppeteer-extra chromium"
   },
   "author": "",
   "license": "ISC",
