@@ -5,3 +5,6 @@
   from = "/api/scrape"
   to = ".netlify/functions/scrape"
   status = 200
+
+[functions.render]
+  external_node_modules = ["chrome-aws-lambda"]
