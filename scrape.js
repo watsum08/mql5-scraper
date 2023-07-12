@@ -15,15 +15,25 @@ async function addToDb(data) {
     const collection = client
       .db(process.env.MONGODB_DBNAME)
       .collection(process.env.MONGODB_COLLECTIONNAME);
-    const result = await collection.insertMany(data);
 
-    console.log(`Inserted ${result.insertedCount} documents into MongoDB`);
+    const options = { upsert: true }; // Enable upsert operation
+
+    for (const item of data) {
+      // Specify the unique identifier for each item in your data
+      const filter = { uniqueField: item.uniqueField };
+
+      // Update the document if it exists, or insert it if it doesn't exist
+      await collection.updateOne(filter, { $set: item }, options);
+    }
+
+    console.log(`Inserted/upserted ${data.length} documents into MongoDB`);
   } catch (e) {
     console.error(e);
   } finally {
     await client.close();
   }
 }
+
 
 async function scrapeWebsite() {
   console.log("Launching browser...");
