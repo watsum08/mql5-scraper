@@ -7,7 +7,7 @@ puppeteer.use(StealthPlugin());
 
 async function addToDb(data) {
   const uri = process.env.MONGODB_URI;
-  const client = new MongoClient(uri);
+  const client = new MongoClient(uri, { useUnifiedTopology: true });
 
   try {
     await client.connect();
@@ -16,17 +16,18 @@ async function addToDb(data) {
       .db(process.env.MONGODB_DBNAME)
       .collection(process.env.MONGODB_COLLECTIONNAME);
 
-    const options = { upsert: true }; // Enable upsert operation
-
     for (const item of data) {
       // Specify the unique identifier for each item in your data
-      const filter = { uniqueField: item.uniqueField };
+      const filter = { name: item.name, message: item.message };
 
-      // Update the document if it exists, or insert it if it doesn't exist
-      await collection.updateOne(filter, { $set: item }, options);
+      // Only insert if a document matching the filter doesn't exist
+      const existingDocument = await collection.findOne(filter);
+      if (!existingDocument) {
+        await collection.insertOne(item);
+      }
     }
 
-    console.log(`Inserted/upserted ${data.length} documents into MongoDB`);
+    console.log(`Inserted documents into MongoDB as needed`);
   } catch (e) {
     console.error(e);
   } finally {
@@ -34,10 +35,20 @@ async function addToDb(data) {
   }
 }
 
+function getLastPageNumber() {
+  const paginatorElement = document.querySelector(".paginatorEx");
+  const lastPageLink = paginatorElement.querySelector("a:last-child");
+  const lastPageUrl = lastPageLink.getAttribute("href");
+  const lastPageNumber = lastPageUrl.match(/page(\d+)/)[1];
+  return parseInt(lastPageNumber);
+}
 
 async function scrapeWebsite() {
   console.log("Launching browser...");
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await puppeteer.launch({
+    headless: true,
+    executablePath: "/usr/bin/chromium-browser",
+  });
 
   console.log("Browser launched!");
   const page = await browser.newPage();
@@ -72,64 +83,86 @@ async function scrapeWebsite() {
   // after navigating to the page with the reviews...
 
   console.log("Extracting reviews...");
-  const data = await page.evaluate(() => {
-    const reviewElements = document.querySelectorAll(".rowLine"); // select each review element
-    let reviews = []; // this array will hold each review
+  const lastPageNumber = await page.evaluate(getLastPageNumber);
 
-    reviewElements.forEach((reviewElement) => {
-      let review = {};
+  // Scrape all pages
+  const data = [];
+  for (let currentPage = 1; currentPage <= lastPageNumber; currentPage++) {
+    console.log(`Scraping page ${page} of ${lastPageNumber}`);
 
-      // Extract the rating
-      const ratingElement = reviewElement.querySelector(
-        ".rating-block-small__value"
-      );
-      if (ratingElement) {
-        // count the number of <i> tags within the rating element
-        let rating = ratingElement.getElementsByTagName("i").length;
-        review.rating = rating;
-      }
+    // Go to the page to scrape
+    await page.goto(
+      `https://www.mql5.com/en/users/taherhalimi/feedbacks/page${currentPage}`,
+      { waitUntil: "domcontentloaded" }
+    );
 
-      // Extract the customer's name
-      const nameElement = reviewElement.querySelector(".author");
-      if (nameElement) {
-        review.name = nameElement.innerText;
-      }
+    // Extract reviews from the current page
+    const pageData = await page.evaluate(() => {
+      const reviewElements = document.querySelectorAll(".rowLine");
+      let reviews = [];
 
-      // Extract the review message
-      const messageElements = reviewElement.querySelectorAll(
-        ".mainContainer > span"
-      );
-      if (messageElements.length > 2) {
-        review.message = messageElements[2].innerText;
-      }
+      reviewElements.forEach((reviewElement) => {
+        let review = {};
 
-      reviews.push(review);
+        // Extract the rating
+        const ratingElement = reviewElement.querySelector(
+          ".rating-block-small__value"
+        );
+        if (ratingElement) {
+          // count the number of <i> tags within the rating element
+          let rating = ratingElement.getElementsByTagName("i").length;
+          review.rating = rating;
+        }
+
+        // Extract the customer's name
+        const nameElement = reviewElement.querySelector(".author");
+        if (nameElement) {
+          review.name = nameElement.innerText;
+        }
+
+        // Extract the review message
+        const messageElements = reviewElement.querySelectorAll(
+          ".mainContainer > span"
+        );
+        if (messageElements.length > 2) {
+          review.message = messageElements[2].innerText;
+        }
+
+        // Extract the date
+        const dateElement = reviewElement.querySelector(".dateContainer");
+        if (dateElement) {
+          review.date = dateElement.innerText;
+        }
+
+        reviews.push(review);
+      });
+
+      return reviews;
     });
 
-    return reviews;
-  });
+    data.push(...pageData);
+  }
 
   await browser.close();
 
   return data;
 }
 
-exports.handler = async function (event) {
-  console.log("Received event: " + event);
+async function runScraping() {
+  console.time("Execution time"); // Start the timer
+  console.log("Running scraper...");
 
   try {
     const data = await scrapeWebsite();
     console.log(data);
     await addToDb(data);
-    return {
-      statusCode: 200,
-      body: "Scrape and data insert successful!",
-    };
+    console.log("Scrape and data insert succesful !");
   } catch (err) {
     console.error(err);
-    return {
-      statusCode: 500,
-      body: "An error occurred",
-    };
+    console.log("An error occured.");
+  } finally {
+    console.timeEnd("Execution time"); // End the timer
   }
-};
+}
+
+runScraping();
