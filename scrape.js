@@ -20,7 +20,6 @@ async function addToDb(data) {
     let addedCount = 0; // This is your counter
 
     for (const item of data) {
-      console.log(item);
       // Specify the unique identifier for each item in your data
       const filter = {
         name: item.name,
