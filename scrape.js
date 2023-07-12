@@ -15,19 +15,33 @@ async function addToDb(data) {
     const collection = client
       .db(process.env.MONGODB_DBNAME)
       .collection(process.env.MONGODB_COLLECTIONNAME);
+    const options = { upsert: true }; // Enable upsert operation
+
+    let addedCount = 0; // This is your counter
 
     for (const item of data) {
+      console.log(item);
       // Specify the unique identifier for each item in your data
-      const filter = { name: item.name, message: item.message };
-
-      // Only insert if a document matching the filter doesn't exist
-      const existingDocument = await collection.findOne(filter);
-      if (!existingDocument) {
-        await collection.insertOne(item);
+      const filter = {
+        name: item.name,
+        message: item.message,
+        date: item.date,
+      };
+      // Update the document if it exists, or insert it if it doesn't exist
+      const result = await collection.updateOne(
+        filter,
+        { $set: item },
+        options
+      );
+      if (result.upsertedCount > 0) {
+        console.log("Added new item:", item);
+        addedCount++; // Increment the counter if a new item was added
+      } else {
+        console.log("Item already exists:", item);
       }
     }
 
-    console.log(`Inserted documents into MongoDB as needed`);
+    console.log(`Total new items added: ${addedCount}`); // Print the counter
   } catch (e) {
     console.error(e);
   } finally {
@@ -88,7 +102,7 @@ async function scrapeWebsite() {
   // Scrape all pages
   const data = [];
   for (let currentPage = 1; currentPage <= lastPageNumber; currentPage++) {
-    console.log(`Scraping page ${page} of ${lastPageNumber}`);
+    console.log(`Scraping page ${currentPage} of ${lastPageNumber}`);
 
     // Go to the page to scrape
     await page.goto(
@@ -131,7 +145,8 @@ async function scrapeWebsite() {
         // Extract the date
         const dateElement = reviewElement.querySelector(".dateContainer");
         if (dateElement) {
-          review.date = dateElement.innerText;
+          const isoDateString = dateElement.innerText.split(".").join("-");
+          review.date = isoDateString; // Add the date to the review object
         }
 
         reviews.push(review);
