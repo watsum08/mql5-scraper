@@ -7,7 +7,7 @@ puppeteer.use(StealthPlugin());
 
 async function addToDb(data) {
   const uri = process.env.MONGODB_URI;
-  const client = new MongoClient(uri, { useUnifiedTopology: true });
+  const client = new MongoClient(uri);
 
   try {
     await client.connect();
@@ -56,11 +56,11 @@ function getLastPageNumber() {
   return parseInt(lastPageNumber);
 }
 
-async function scrapeWebsite() {
+async function scrapeWebsite(latestReviewDate) {
   console.log("Launching browser...");
   const browser = await puppeteer.launch({
     headless: true,
-    executablePath: "/usr/bin/chromium-browser",
+    executablePath: process.env.CHROME_EXECUTABLE_PATH,
     args: ["--no-sandbox"],
   });
 
@@ -113,28 +113,24 @@ async function scrapeWebsite() {
     // Extract reviews from the current page
     const pageData = await page.evaluate(() => {
       const reviewElements = document.querySelectorAll(".rowLine");
-      let reviews = [];
+      const reviews = [];
 
       reviewElements.forEach((reviewElement) => {
-        let review = {};
+        const review = {};
 
-        // Extract the rating
         const ratingElement = reviewElement.querySelector(
           ".rating-block-small__value"
         );
         if (ratingElement) {
-          // count the number of <i> tags within the rating element
-          let rating = ratingElement.getElementsByTagName("i").length;
+          const rating = ratingElement.getElementsByTagName("i").length;
           review.rating = rating;
         }
 
-        // Extract the customer's name
         const nameElement = reviewElement.querySelector(".author");
         if (nameElement) {
           review.name = nameElement.innerText;
         }
 
-        // Extract the review message
         const messageElements = reviewElement.querySelectorAll(
           ".mainContainer > span"
         );
@@ -142,11 +138,10 @@ async function scrapeWebsite() {
           review.message = messageElements[2].innerText;
         }
 
-        // Extract the date
         const dateElement = reviewElement.querySelector(".dateContainer");
         if (dateElement) {
           const isoDateString = dateElement.innerText.split(".").join("-");
-          review.date = isoDateString; // Add the date to the review object
+          review.date = isoDateString;
         }
 
         reviews.push(review);
@@ -155,7 +150,14 @@ async function scrapeWebsite() {
       return reviews;
     });
 
-    data.push(...pageData);
+    for (const review of pageData) {
+      if (new Date(review.date) <= new Date(latestReviewDate)) {
+        console.log("Encountered existing review, stopping scraping.");
+        stopScraping = true;
+        break;
+      }
+      data.push(review);
+    }
   }
 
   await browser.close();
@@ -163,12 +165,42 @@ async function scrapeWebsite() {
   return data;
 }
 
+async function getLastReviewDate() {
+  const uri = process.env.MONGODB_URI;
+  const client = new MongoClient(uri);
+
+  try {
+    await client.connect();
+    const collection = client
+      .db(process.env.MONGODB_DBNAME)
+      .collection(process.env.MONGODB_COLLECTIONNAME);
+
+    const latestReview = await collection
+      .find({})
+      .sort({ date: -1 })
+      .limit(1)
+      .toArray();
+
+    if (latestReview.length > 0) {
+      return latestReview[0].date;
+    } else {
+      return null;
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    await client.close();
+  }
+}
+
 async function runScraping() {
   console.time("Execution time"); // Start the timer
   console.log("Running scraper...");
 
   try {
-    const data = await scrapeWebsite();
+    const latestReviewDate = await getLastReviewDate();
+    console.log("Latest review date:", latestReviewDate);
+    const data = await scrapeWebsite(latestReviewDate);
     console.log(data);
     await addToDb(data);
     console.log("Scrape and data insert succesful !");
