@@ -4,27 +4,25 @@
   "description": "",
   "main": "scrape.js",
   "scripts": {
-    "start": "micro scrape.js",
-    "dev": "micro scrape.js",
+    "start": "node scrape.js",
+    "dev": "node scrape.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "start"
+    "build": "node scrape.js",
+    "knip": "knip"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@netlify/functions": "^1.6.0",
-    "chrome-aws-lambda": "^10.1.0",
-    "chromium": "^3.0.3",
-    "dotenv": "^8.2.0",
-    "micro": "^10.0.1",
-    "mongodb": "^3.6.6",
-    "playwright-chromium": "^1.36.0",
-    "playwright-core": "^1.14.1",
-    "puppeteer-core": "^10.4.0",
+    "dotenv": "^16.4.5",
+    "mongodb": "^6.8.0",
+    "puppeteer-core": "^22.12.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
   "devDependencies": {
-    "netlify-cli": "^15.8.1"
-  }
+    "@types/node": "^20.14.9",
+    "knip": "^5.23.1",
+    "typescript": "^5.5.2"
+  },
+  "packageManager": "yarn@4.3.1"
 }
